@@ -15,6 +15,8 @@ class DWAConfig:
     alpha_heading: float = 0.40         # Target heading weight
     beta_clearance: float = 0.15        # Obstacle clearance weight
     gamma_velocity: float = 0.30        # Velocity maximization weight
+    safety_margin_m: float = 0.10       # Clearance kept beyond the robot radius
+    sensing_margin_m: float = 0.05      # Obstacle points sit up to half a grid cell inside the surface
 
 
 class DynamicWindowPlanner:
@@ -29,6 +31,7 @@ class DynamicWindowPlanner:
         current_state: RobotState,
         target_waypoint: Tuple[float, float],
         obstacles: List[Tuple[float, float]],  # List of (x, y) obstacle points
+        v_limit: Optional[float] = None,       # speed cap, e.g. from a safety warning field
     ) -> Tuple[float, float, List[Tuple[float, float]]]:
         """Compute optimal (v, w) command and corresponding trajectory rollout.
 
@@ -48,6 +51,9 @@ class DynamicWindowPlanner:
         v_max = min(vs[1], vd[1])
         w_min = max(vs[2], vd[2])
         w_max = min(vs[3], vd[3])
+        if v_limit is not None:
+            # Brake towards the cap as fast as the dynamic window allows.
+            v_max = min(v_max, max(v_limit, v_min))
 
         v_candidates = np.linspace(v_min, v_max, self.dwa_cfg.v_samples)
         w_candidates = np.linspace(w_min, w_max, self.dwa_cfg.w_samples)
@@ -59,14 +65,21 @@ class DynamicWindowPlanner:
 
         obs_np = np.array(obstacles) if len(obstacles) > 0 else np.empty((0, 2))
 
+        # Admissible trajectories keep the robot radius plus the safety margin.
+        # If the robot is already inside the margin, a trajectory is still
+        # admissible as long as it does not get any closer; otherwise every
+        # option, including turning on the spot, is rejected and it deadlocks.
+        hard_limit = self.r_cfg.radius_m + self.dwa_cfg.sensing_margin_m
+        current = self._compute_obstacle_clearance([(current_state.x, current_state.y, current_state.theta)], obs_np)
+        limit = max(hard_limit, min(self.r_cfg.radius_m + self.dwa_cfg.safety_margin_m, current) - 1e-3)
+
         for v in v_candidates:
             for w in w_candidates:
                 traj = self._rollout_trajectory(current_state, v, w)
 
-                # Collision check
                 min_obs_dist = self._compute_obstacle_clearance(traj, obs_np)
-                if min_obs_dist < self.r_cfg.radius_m:
-                    continue  # Trajectory causes collision, skip
+                if min_obs_dist < limit:
+                    continue
 
                 # Score evaluation
                 heading_score = self._compute_heading_score(traj[-1], target_waypoint)
