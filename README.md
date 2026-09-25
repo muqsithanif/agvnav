@@ -8,32 +8,23 @@ Autonomous mobile robot (AMR / AGV) navigation pipeline for industrial shop floo
 
 ---
 
-## The Factory Navigation Problem
+## Navigation Architecture: Global Planning & Local Avoidance
 
-In industrial manufacturing logistics, an Automated Guided Vehicle (AGV) or Autonomous Mobile Robot (AMR) operates in environments with both **static infrastructure** (CNC cells, storage racks, boundary walls) and **unpredictable dynamic actors** (human operators, forklifts, fallen pallets).
+Automated Guided Vehicles (AGVs) operating on active shop floors require both global topological routing around permanent facility structures and real-time reactive avoidance of dynamic obstacles (personnel, forklifts, transient obstructions).
 
-A static path planner alone is insufficient: if a human steps into an aisle, a robot following a fixed trajectory either collides or emergency-stops indefinitely.
+This system implements a two-layer hierarchical navigation stack:
 
-### The Hierarchical Navigation Architecture
+```mermaid
+flowchart TD
+    Map["Factory Floor Map (Machine Footprints)"] --> CSpace["C-Space Obstacle Inflation (Robot Radius + Margin)"]
+    CSpace --> GlobalPlan["Global A* Graph Search"]
+    GlobalPlan --> Smoothing["Line-of-Sight Path Smoothing"]
+    Smoothing --> Waypoints["Lookahead Waypoint Tracker"]
 
-```
-Factory Floor Map + Machine Footprints
-             │
-             ▼
-[ C-Space Obstacle Inflation ] ──► Dilates obstacles by R_robot + Safety Margin
-             │
-             ▼
-[ Global A* Graph Search ] ──► Shortest topological path around permanent machines
-             │
-             ▼
-[ Lookahead Waypoint Tracking ]
-             │
-             ▲ 2D Planar LiDAR Scan (Static + Moving Obstacles)
-             │
-[ Dynamic Window Approach (DWA) ] ──► Samples kinematically feasible (v, w) rollouts
-             │
-             ▼
-Differential Drive Velocity Commands (v, w) ──► Non-Holonomic Robot Kinematics
+    LiDAR["2D Planar LiDAR Scan"] --> DWA["Dynamic Window Approach (DWA)"]
+    Waypoints --> DWA
+    DWA --> Commands["Velocity Commands (v, w)"]
+    Commands --> Kinematics["Differential Drive Kinematics"]
 ```
 
 ---
@@ -61,7 +52,7 @@ $$J(v, \omega) = \alpha \cdot \text{heading}(v, \omega) + \beta \cdot \text{dist
 Where:
 - $\text{heading}(v, \omega) = \pi - |\theta_{\text{target}} - \theta_{\text{pred}}|$: Aligns chassis with the next global path waypoint.
 - $\text{dist}(v, \omega) = \min_{p \in \text{traj}, o \in \text{obs}} \|p - o\|_2$: Hard collision penalty ($\text{dist} < R_{\text{robot}} \implies J = -\infty$).
-- $\text{velocity}(v, \omega) = \frac{v}{v_{\text{max}}}$: Maximizes throughput and prevents indecisive creeping.
+- $\text{velocity}(v, \omega) = \frac{v}{v_{\text{max}}}$: Encourages forward progress at operational velocity.
 
 ---
 

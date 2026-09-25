@@ -19,9 +19,7 @@ from core.visualizer import AGVVisualizer
 
 
 def main():
-    print("==================================================================")
-    print("    agvnav: Autonomous Factory AMR / AGV Navigation")
-    print("==================================================================")
+    print("agvnav: Running autonomous factory navigation pipeline...")
 
     # 1. Initialize Factory Floor & Robot
     print("\n[1/5] Building Factory Shop Floor Map & C-Space Inflation...")
@@ -153,11 +151,7 @@ def main():
     print(f"      Goal Reached Status      : {'SUCCESS' if goal_reached else 'IN_TRANSIT'}")
     print(f"      Total Traveled Distance  : {total_travel_dist:.2f} m")
     print(f"      Obstacle Collisions      : 0 (Zero Collision Safety Contract)")
-    print("      ------------------------------------------------------")
-
-    print("\n==================================================================")
-    print("Mission Execution Completed Successfully!")
-    print("==================================================================")
+    print(f"Navigation mission finished. Artifacts saved to: {samples_dir}")
 
 
 if __name__ == "__main__":
