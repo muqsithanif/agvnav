@@ -30,3 +30,10 @@ def test_obstacle_avoidance():
     # Path must detour around the obstacle (Y > 4.0)
     max_y = max(p[1] for p in path)
     assert max_y > 4.0
+
+
+def test_rectangle_marks_only_cells_whose_centres_are_inside():
+    # 0.1 m cells: a 1.0 m x 0.4 m rectangle is 10 x 4 cells, not 11 x 5.
+    grid = OccupancyGridMap(width_m=5.0, height_m=5.0, resolution_m=0.1)
+    grid.set_obstacle_rect(1.0, 1.0, 2.0, 1.4)
+    assert grid.grid.sum() == 40

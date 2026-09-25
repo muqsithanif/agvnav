@@ -45,16 +45,16 @@ class OccupancyGridMap:
         return 0 <= row < self.rows and 0 <= col < self.cols
 
     def set_obstacle_rect(self, x_min: float, y_min: float, x_max: float, y_max: float) -> None:
-        """Add rectangular static obstacle (e.g. storage rack or machine)."""
-        r_min, c_min = self.world_to_grid(x_min, y_min)
-        r_max, c_max = self.world_to_grid(x_max, y_max)
+        """Mark the cells whose centres fall inside the rectangle.
 
-        r_start = max(0, min(r_min, r_max))
-        r_end = min(self.rows, max(r_min, r_max) + 1)
-        c_start = max(0, min(c_min, c_max))
-        c_end = min(self.cols, max(c_min, c_max) + 1)
-
-        self.grid[r_start:r_end, c_start:c_end] = True
+        Marking every cell the rectangle touches, as an earlier version did,
+        makes each obstacle up to one cell larger than drawn.
+        """
+        c_start = int(np.ceil((x_min - self.origin_x) / self.res - 0.5))
+        c_end = int(np.floor((x_max - self.origin_x) / self.res - 0.5))
+        r_start = int(np.ceil((y_min - self.origin_y) / self.res - 0.5))
+        r_end = int(np.floor((y_max - self.origin_y) / self.res - 0.5))
+        self.grid[max(0, r_start):min(self.rows, r_end + 1), max(0, c_start):min(self.cols, c_end + 1)] = True
 
     def compute_inflation(self, robot_radius_m: float, safety_margin_m: float = 0.10) -> None:
         """Dilate obstacles by robot physical footprint to construct Configuration Space (C-space)."""
