@@ -14,6 +14,17 @@ The floor is 10 m × 10 m, with walls, two CNC cells with a 1.4 m doorway betwee
 
 ## How it drives
 
+```mermaid
+flowchart LR
+    Map["Occupancy grid, inflated by radius + 0.2 m"] --> AStar["A* with line-of-sight smoothing"]
+    AStar --> WP["Next waypoint"]
+    LiDAR["LiDAR scan: 90 beams over 180°"] --> DWA["DWA local planner"]
+    LiDAR --> Fields["Safety fields: unmapped objects only"]
+    WP --> DWA
+    Fields -->|"slow down or stop"| DWA
+    DWA --> Cmd["Forward and turning speed to the drive"]
+```
+
 **Global plan.** A* runs on an 8-connected occupancy grid with 0.1 m cells. Obstacles are inflated by the robot radius plus 0.2 m, and the path is shortened by line-of-sight smoothing. The inflation is deliberately larger than the margin the local planner keeps. With the same margin, the smoothed path cut corners closer than the local planner would accept, and the robot stopped in front of the doorway.
 
 **Local control.** DWA samples forward and turning speeds reachable within one control step, rolls each pair forward 1.6 s, and scores it on heading to the next waypoint, clearance and speed. A trajectory is admissible only if it keeps 0.1 m beyond the robot radius. Once the robot is already inside that margin, a trajectory is still allowed as long as it does not get any closer. Without that exception every option is rejected, including turning on the spot, and the robot deadlocks.
