@@ -1,0 +1,23 @@
+{
+  "goal_reached": true,
+  "time_to_goal_s": 33.15,
+  "astar_planning_ms": 29.5,
+  "path_length_m": {
+    "driven": 10.57,
+    "straight_line": 9.91,
+    "ratio": 1.07
+  },
+  "min_clearance_m": {
+    "static_obstacles": 0.064,
+    "static_obstacles_at_xy": [
+      7.76,
+      5.74
+    ],
+    "worker": 0.156
+  },
+  "collision": false,
+  "contact_with_worker_while_moving": false,
+  "time_in_protective_stop_s": 5.9,
+  "time_at_warning_speed_s": 7.45,
+  "control_period_s": 0.05
+}
